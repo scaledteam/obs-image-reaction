@@ -146,10 +146,13 @@ static void image_reaction_source_update(void *data, obs_data_t *settings)
 
 	if (old_name == NULL || (new_name != "" && strcmp(new_name, old_name) != 0)) {
 		info("name changed");
+		
 		obs_source_t *capture = obs_get_source_by_name(new_name);
 		//obs_weak_source_t *weak_capture = capture ? obs_source_get_weak_source(capture) : NULL;
 		
 		if (capture) {
+			obs_source_remove_audio_capture_callback(context->audio_source, audio_capture, context);
+			
 			context->audio_source = capture;
 			
 			info("Added audio capture to '%s'", obs_source_get_name(capture));
