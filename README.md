@@ -1,5 +1,10 @@
-# obs-image-reaction
-OBS Plugin with image that reacts to sound source.
+# OBS Image Reaction Plugin
+Image that reacts to sound source.
+
+## Installing binaries
+Download binaries from [Releases](https://github.com/scaledteam/obs-image-reaction/releases/). 
+For Windows, put "libimage-reaction.dll" into "C:\Program Files\obs-studio\obs-plugins\64bit\" folder.
+For GNU/Linux, put "libimage-reaction" folder into "~/.config/obs-studio/plugins" folder.
 
 ## Building and installing for GNU/Linux:
 ```
