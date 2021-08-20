@@ -1,5 +1,5 @@
 # OBS Image Reaction Plugin
-Image that reacts to sound source.
+Image that reacts to sound source. It change picture from one to another based on volume.
 
 ## Installing binaries
 Download binaries from [Releases](https://github.com/scaledteam/obs-image-reaction/releases/). 
