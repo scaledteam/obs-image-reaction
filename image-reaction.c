@@ -168,7 +168,7 @@ static void image_reaction_source_defaults(obs_data_t *settings)
 	obs_data_set_default_bool(settings, "unload", false);
 	obs_data_set_default_bool(settings, "linear_alpha", false);
         obs_data_set_default_string(settings, "audio_source", "");
-        obs_data_set_default_double(settings, "threshold", 0.0f);
+        obs_data_set_default_double(settings, "threshold", -40.0f);
         obs_data_set_default_double(settings, "smoothness", 1.0f);
 }
 
