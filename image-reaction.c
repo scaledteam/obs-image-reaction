@@ -37,6 +37,13 @@ struct image_reaction_source {
 	float threshold;
 	float smoothness;
 	float average;
+	
+	uint64_t last_time;
+	
+	bool animReset1;
+	bool animReset2;
+	bool loudOld;
+	bool animResetTrigger;
 };
 
 /*int MAX(int a, int b) {
@@ -49,7 +56,7 @@ struct image_reaction_source {
 static const char *image_reaction_source_get_name(void *unused)
 {
 	UNUSED_PARAMETER(unused);
-	return obs_module_text("Image Reaction Source");
+	return obs_module_text("ImageReactionSource");
 }
 
 static void image_reaction_source_load(struct image_reaction_source *context)
@@ -92,7 +99,6 @@ static void audio_capture(void *param, obs_source_t *src, const struct audio_dat
 {
 	struct image_reaction_source *context = param;
 	
-	context->loud = false;
 	
 	uint32_t samplesCount = data->frames;
 	float* samples = (float*)data->data[0];
@@ -104,10 +110,11 @@ static void audio_capture(void *param, obs_source_t *src, const struct audio_dat
 	}
 	
 	context->average += context->smoothness * (averageLocal - context->average);
-	if (context->average > context->threshold) {
-		context->loud = true;
-	}
-	//printf("%f\n", average);
+	context->loudOld = context->loud;
+	context->loud = context->average > context->threshold;
+	
+	if (context->loud != context->loudOld)
+		context->animResetTrigger = true;
 }
 
 static void image_reaction_source_update(void *data, obs_data_t *settings)
@@ -115,6 +122,8 @@ static void image_reaction_source_update(void *data, obs_data_t *settings)
 	struct image_reaction_source *context = data;
 	const char *file1 = obs_data_get_string(settings, "file1");
 	const char *file2 = obs_data_get_string(settings, "file2");
+	const bool anim_reset_1 = obs_data_get_bool(settings, "anim_reset_1");
+	const bool anim_reset_2 = obs_data_get_bool(settings, "anim_reset_2");
 	const bool unload = obs_data_get_bool(settings, "unload");
 	const bool linear_alpha = obs_data_get_bool(settings, "linear_alpha");
 	const double threshold = obs_data_get_double(settings, "threshold");
@@ -127,6 +136,9 @@ static void image_reaction_source_update(void *data, obs_data_t *settings)
 	if (context->file2)
 		bfree(context->file2);
 	context->file2 = bstrdup(file2);
+	
+	context->animReset1 = anim_reset_1;
+	context->animReset2 = anim_reset_2;
 	
 	context->persistent = !unload;
 	context->linear_alpha = linear_alpha;
@@ -260,6 +272,67 @@ static void image_reaction_source_render(void *data, gs_effect_t *effect)
 	gs_enable_framebuffer_srgb(previous);
 }
 
+static void image_reaction_tick(void *data, float seconds)
+{
+	struct image_reaction_source *context = data;
+	uint64_t frame_time = obs_get_video_frame_time();
+
+	for (int i = 0; i <=1; i++) {
+		gs_image_file3_t *if3 = i == 0 ? &context->if31 : &context->if32;
+		bool animReset = i == 0 ? context->animReset1 : context->animReset2;
+		
+		if (obs_source_active(context->source)) {
+			if (!context->active) {
+				if (if3->image2.image.is_animated_gif)
+					context->last_time = frame_time;
+				context->active = true;
+			}
+
+		} else {
+			if (context->active) {
+				if (if3->image2.image.is_animated_gif) {
+					if3->image2.image.cur_frame = 0;
+					if3->image2.image.cur_loop = 0;
+					if3->image2.image.cur_time = 0;
+
+					obs_enter_graphics();
+					gs_image_file3_update_texture(if3);
+					obs_leave_graphics();
+				}
+
+				context->active = false;
+			}
+
+			//return;
+		}
+
+		if (context->last_time && if3->image2.image.is_animated_gif) {
+			if (animReset && context->animResetTrigger) {
+				if3->image2.image.cur_frame = 0;
+				if3->image2.image.cur_loop = 0;
+				if3->image2.image.cur_time = 0;
+
+				obs_enter_graphics();
+				gs_image_file3_update_texture(if3);
+				obs_leave_graphics();
+			}
+			else {
+				uint64_t elapsed = frame_time - context->last_time;
+				bool updated = gs_image_file3_tick(if3, elapsed);
+
+				if (updated) {
+					obs_enter_graphics();
+					gs_image_file3_update_texture(if3);
+					obs_leave_graphics();
+				}
+			}
+		}
+	}
+	context->animResetTrigger = false;
+
+	context->last_time = frame_time;
+}
+
 static const char *image_filter =
 	"All formats (*.bmp *.tga *.png *.jpeg *.jpg *.gif *.psd *.webp);;"
 	"BMP Files (*.bmp);;"
@@ -309,8 +382,12 @@ static obs_properties_t *image_reaction_source_properties(void *data)
 
 	obs_properties_add_path(props, "file1", obs_module_text("Reaction1"),
 				OBS_PATH_FILE, image_filter, path.array);
+	obs_properties_add_bool(props, "anim_reset_1",
+				obs_module_text("AnimReset1"));
 	obs_properties_add_path(props, "file2", obs_module_text("Reaction2"),
 				OBS_PATH_FILE, image_filter, path.array);
+	obs_properties_add_bool(props, "anim_reset_2",
+				obs_module_text("AnimReset2"));
 	dstr_free(&path);
 	
 	obs_properties_add_bool(props, "unload",
@@ -366,12 +443,13 @@ static struct obs_source_info image_reaction_source_info = {
 	.get_width = image_reaction_source_getwidth,
 	.get_height = image_reaction_source_getheight,
 	.video_render = image_reaction_source_render,
+	.video_tick = image_reaction_tick,
 	.get_properties = image_reaction_source_properties,
 	.icon_type = OBS_ICON_TYPE_IMAGE,
 };
 
 OBS_DECLARE_MODULE()
-OBS_MODULE_USE_DEFAULT_LOCALE("image-source", "en-US")
+OBS_MODULE_USE_DEFAULT_LOCALE("image-reaction", "en-US")
 MODULE_EXPORT const char *obs_module_description(void)
 {
 	return "Image reaction source";

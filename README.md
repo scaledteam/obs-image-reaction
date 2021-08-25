@@ -1,5 +1,5 @@
 # OBS Image Reaction Plugin
-Image that reacts to sound source. It change picture from one to another based on volume.
+Image that reacts to sound source.
 
 ## Installing binaries
 Download binaries from [Releases](https://github.com/scaledteam/obs-image-reaction/releases/). 
@@ -18,6 +18,7 @@ cmake ..
 make
 mkdir -p ~/.config/obs-studio/plugins/libimage-reaction/bin/64bit
 cp libimage-reaction.so ~/.config/obs-studio/plugins/libimage-reaction/bin/64bit/
+cp -r ../data  ~/.config/obs-studio/plugins/libimage-reaction/
 ```
 
 ## Building for Windows from GNU/Linux:
