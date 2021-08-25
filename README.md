@@ -4,9 +4,9 @@ Image that reacts to sound source.
 ## Installing binaries
 Download binaries from [Releases](https://github.com/scaledteam/obs-image-reaction/releases/). 
 
-For Windows, put "libimage-reaction.dll" into "C:\Program Files\obs-studio\obs-plugins\64bit\" folder.
+For Windows, Move the contents of plugin into your obs installation directory. It usually installed into "C:\Program Files\obs-studio\".
 
-For GNU/Linux, put "libimage-reaction" folder into "~/.config/obs-studio/plugins" folder.
+For GNU/Linux, put "libimage-reaction" folder into "~/.config/obs-studio/plugins/" folder.
 
 ## Building and installing for GNU/Linux:
 ```
