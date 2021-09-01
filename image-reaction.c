@@ -1,7 +1,8 @@
 //
 // Created by scaled
 //
-// Based on image-source.c from OBS Studio
+// Based on image-source.c from OBS Studio: https://github.com/obsproject/obs-studio
+// Also included some code from Spectralizer plugin: https://github.com/univrsal/spectralizer
 //
 
 #include <obs-module.h>
@@ -21,6 +22,7 @@
 
 struct image_reaction_source {
 	obs_source_t *source;
+	char* source_name;
 
 	char *file1;
 	char *file2;
@@ -31,7 +33,7 @@ struct image_reaction_source {
 	gs_image_file3_t if31;
 	gs_image_file3_t if32;
 	
-	obs_source_t *audio_source;
+	obs_weak_source_t *audio_source;
 	
 	bool loud;
 	float threshold;
@@ -39,6 +41,7 @@ struct image_reaction_source {
 	float average;
 	
 	uint64_t last_time;
+	uint64_t capture_check_time;
 	
 	bool animReset1;
 	bool animReset2;
@@ -84,7 +87,6 @@ static void image_reaction_source_load(struct image_reaction_source *context)
 				warn("failed to load texture '%s'", file);
 		}
 	}
-	context->loud = false;
 }
 
 static void image_reaction_source_unload(struct image_reaction_source *context)
@@ -99,17 +101,23 @@ static void audio_capture(void *param, obs_source_t *src, const struct audio_dat
 {
 	struct image_reaction_source *context = param;
 	
-	
-	uint32_t samplesCount = data->frames;
-	float* samples = (float*)data->data[0];
-	
-	float averageLocal = 0.0f;
-	
-	for (uint32_t i = 0; i < samplesCount; i++) {
-		averageLocal += fabs(samples[i]) / samplesCount;
+	if (muted) {
+		context->average = 0;
+	}
+	else
+	{
+		uint32_t samplesCount = data->frames;
+		float* samples = (float*)data->data[0];
+		
+		float averageLocal = 0.0f;
+		
+		for (uint32_t i = 0; i < samplesCount; i++) {
+			averageLocal += fabs(samples[i]) / samplesCount;
+		}
+		
+		context->average += context->smoothness * (averageLocal - context->average);
 	}
 	
-	context->average += context->smoothness * (averageLocal - context->average);
 	context->loudOld = context->loud;
 	context->loud = context->average > context->threshold;
 	
@@ -153,7 +161,7 @@ static void image_reaction_source_update(void *data, obs_data_t *settings)
 	else
 		image_reaction_source_unload(data);
 	
-	const char* new_name = obs_data_get_string(settings, "audio_source");
+	/*const char* new_name = obs_data_get_string(settings, "audio_source");
 	const char* old_name = obs_source_get_name(context->audio_source);
 
 	if (old_name == NULL || (new_name != "" && strcmp(new_name, old_name) != 0)) {
@@ -163,7 +171,8 @@ static void image_reaction_source_update(void *data, obs_data_t *settings)
 		//obs_weak_source_t *weak_capture = capture ? obs_source_get_weak_source(capture) : NULL;
 		
 		if (capture) {
-			obs_source_remove_audio_capture_callback(context->audio_source, audio_capture, context);
+			if (context->audio_source)
+				obs_source_remove_audio_capture_callback(context->audio_source, audio_capture, context);
 			
 			context->audio_source = capture;
 			
@@ -172,6 +181,41 @@ static void image_reaction_source_update(void *data, obs_data_t *settings)
 			//obs_weak_source_release(weak_capture);
 			obs_source_release(capture);
 		}
+	}*/
+	
+	const char* cfg_source_name = obs_data_get_string(settings, "audio_source");
+	
+	//obs_weak_source_t *old = nullptr;
+	obs_weak_source_t *old = NULL;
+
+	//if (cfg_source_name.empty()) {
+	if (cfg_source_name[0] == 0) {
+		if (context->audio_source) {
+			old = context->audio_source;
+			//context->audio_source = nullptr;
+			context->audio_source = NULL;
+		}
+		context->source_name = "";
+	} else {
+		if (context->source_name[0] == 0 || strcmp(context->source_name, cfg_source_name) != 0) {
+			if (context->audio_source) {
+				old = context->audio_source;
+				//context->audio_source = nullptr;
+				context->audio_source = NULL;
+			}
+			context->source_name = cfg_source_name;
+			context->capture_check_time = os_gettime_ns() - 3000000000;
+		}
+	}
+
+	if (old) {
+		obs_source_t *old_source = obs_weak_source_get_source(old);
+		if (old_source) {
+			info("Removed audio capture from '%s'", obs_source_get_name(old_source));
+			obs_source_remove_audio_capture_callback(old_source, audio_capture, context);
+			obs_source_release(old_source);
+		}
+		obs_weak_source_release(old);
 	}
 }
 
@@ -204,6 +248,9 @@ static void *image_reaction_source_create(obs_data_t *settings, obs_source_t *so
 {
 	struct image_reaction_source *context = bzalloc(sizeof(struct image_reaction_source));
 	context->source = source;
+	
+	context->source_name = "";
+	context->loud = false;
 
 	image_reaction_source_update(context, settings);
 	return context;
@@ -221,7 +268,7 @@ static void image_reaction_source_destroy(void *data)
 	if (context->file2)
 		bfree(context->file2);
 	
-	if (context->audio_source) {
+	/*if (context->audio_source) {
 		//obs_source_t *source = obs_weak_source_get_source(context->audio_source);
 		//if (source) {
 			info("Removed audio capture from '%s'", obs_source_get_name(context->audio_source));
@@ -229,6 +276,15 @@ static void image_reaction_source_destroy(void *data)
 			//obs_source_release(source);
 		//}
 		//obs_weak_source_release(context->audio_source);
+	}*/
+	if (context->audio_source) {
+		obs_source_t *source = obs_weak_source_get_source(context->audio_source);
+		if (source) {
+			info("Removed audio capture from '%s'", obs_source_get_name(source));
+			obs_source_remove_audio_capture_callback(source, audio_capture, context);
+			obs_source_release(source);
+		}
+		obs_weak_source_release(context->audio_source);
 	}
 	
 	bfree(context);
@@ -275,21 +331,50 @@ static void image_reaction_source_render(void *data, gs_effect_t *effect)
 static void image_reaction_tick(void *data, float seconds)
 {
 	struct image_reaction_source *context = data;
+	
+
+	// Update / refresh audio capturing
+	char* new_name = NULL;
+	if (context->source_name[0] != 0 && !context->audio_source) {
+		uint64_t t = os_gettime_ns();
+
+		if (t - context->capture_check_time > 3000000000) {
+			new_name = context->source_name;
+			context->capture_check_time = t;
+		}
+	}
+
+	if (new_name != NULL) {
+		obs_source_t *capture = obs_get_source_by_name(new_name);
+		obs_weak_source_t *weak_capture = capture ? obs_source_get_weak_source(capture) : NULL;
+
+		if (context->source_name[0] != 0 && new_name == context->source_name) {
+			context->audio_source = weak_capture;
+			//weak_capture = nullptr;
+			weak_capture = NULL;
+		}
+
+		if (capture) {
+			info("Added audio capture to '%s'", obs_source_get_name(capture));
+			obs_source_add_audio_capture_callback(capture, audio_capture, context);
+			obs_weak_source_release(weak_capture);
+			obs_source_release(capture);
+		}
+	}
+	
+	// update GIF's
 	uint64_t frame_time = obs_get_video_frame_time();
+	if (obs_source_active(context->source)) {
+		if (!context->active) {
+			if (context->if31.image2.image.is_animated_gif || context->if32.image2.image.is_animated_gif)
+				context->last_time = frame_time;
+			context->active = true;
+		}
 
-	for (int i = 0; i <=1; i++) {
-		gs_image_file3_t *if3 = i == 0 ? &context->if31 : &context->if32;
-		bool animReset = i == 0 ? context->animReset1 : context->animReset2;
-		
-		if (obs_source_active(context->source)) {
-			if (!context->active) {
-				if (if3->image2.image.is_animated_gif)
-					context->last_time = frame_time;
-				context->active = true;
-			}
-
-		} else {
-			if (context->active) {
+	} else {
+		if (context->active) {
+			for (int i = 0; i <=1; i++) {
+				gs_image_file3_t *if3 = i == 0 ? &context->if31 : &context->if32;
 				if (if3->image2.image.is_animated_gif) {
 					if3->image2.image.cur_frame = 0;
 					if3->image2.image.cur_loop = 0;
@@ -299,12 +384,16 @@ static void image_reaction_tick(void *data, float seconds)
 					gs_image_file3_update_texture(if3);
 					obs_leave_graphics();
 				}
-
-				context->active = false;
 			}
 
-			//return;
+			context->active = false;
 		}
+	}
+
+	for (int i = 0; i <=1; i++) {
+		gs_image_file3_t *if3 = i == 0 ? &context->if31 : &context->if32;
+		bool animReset = i == 0 ? context->animReset1 : context->animReset2;
+		
 
 		if (context->last_time && if3->image2.image.is_animated_gif) {
 			if (animReset && context->animResetTrigger) {
@@ -396,6 +485,7 @@ static obs_properties_t *image_reaction_source_properties(void *data)
 				obs_module_text("LinearAlpha"));
 	obs_property_t* sources_list = obs_properties_add_list(props, "audio_source",
 				obs_module_text("AudioSource"), OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
+	obs_property_list_add_string(sources_list, "", "");
 				
 	obs_property_t *p = obs_properties_add_float_slider(props, "threshold",
 		obs_module_text("Threshold"), -60.0, 0.0, 0.1);
