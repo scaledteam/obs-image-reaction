@@ -22,7 +22,7 @@
 
 struct image_reaction_source {
 	obs_source_t *source;
-	char* source_name;
+	char source_name[255];
 
 	char *file1;
 	char *file2;
@@ -152,8 +152,6 @@ static void image_reaction_source_update(void *data, obs_data_t *settings)
 	context->linear_alpha = linear_alpha;
 	context->threshold = db_to_mul(threshold);
 	context->smoothness = pow(0.1, smoothness);
-	//printf("%f\n",context->smoothness); 
-	//info("%f, %d\n", threshold, context->threshold);
 
 	/* Load the image if the source is persistent or showing */
 	if (context->persistent || obs_source_showing(context->source))
@@ -161,49 +159,24 @@ static void image_reaction_source_update(void *data, obs_data_t *settings)
 	else
 		image_reaction_source_unload(data);
 	
-	/*const char* new_name = obs_data_get_string(settings, "audio_source");
-	const char* old_name = obs_source_get_name(context->audio_source);
-
-	if (old_name == NULL || (new_name != "" && strcmp(new_name, old_name) != 0)) {
-		info("name changed");
-		
-		obs_source_t *capture = obs_get_source_by_name(new_name);
-		//obs_weak_source_t *weak_capture = capture ? obs_source_get_weak_source(capture) : NULL;
-		
-		if (capture) {
-			if (context->audio_source)
-				obs_source_remove_audio_capture_callback(context->audio_source, audio_capture, context);
-			
-			context->audio_source = capture;
-			
-			info("Added audio capture to '%s'", obs_source_get_name(capture));
-			obs_source_add_audio_capture_callback(capture, audio_capture, context);
-			//obs_weak_source_release(weak_capture);
-			obs_source_release(capture);
-		}
-	}*/
-	
 	const char* cfg_source_name = obs_data_get_string(settings, "audio_source");
 	
-	//obs_weak_source_t *old = nullptr;
 	obs_weak_source_t *old = NULL;
 
-	//if (cfg_source_name.empty()) {
-	if (cfg_source_name[0] == 0) {
+	if (cfg_source_name[0] == '\0') {
 		if (context->audio_source) {
 			old = context->audio_source;
-			//context->audio_source = nullptr;
 			context->audio_source = NULL;
 		}
-		context->source_name = "";
-	} else {
-		if (context->source_name[0] == 0 || strcmp(context->source_name, cfg_source_name) != 0) {
+		context->source_name[0] = '\0';
+	}
+	else {
+		if (context->source_name[0] == '\0' || strcmp(context->source_name, cfg_source_name) != 0) {
 			if (context->audio_source) {
 				old = context->audio_source;
-				//context->audio_source = nullptr;
 				context->audio_source = NULL;
 			}
-			context->source_name = cfg_source_name;
+			strcpy(context->source_name, cfg_source_name);
 			context->capture_check_time = os_gettime_ns() - 3000000000;
 		}
 	}
@@ -249,7 +222,7 @@ static void *image_reaction_source_create(obs_data_t *settings, obs_source_t *so
 	struct image_reaction_source *context = bzalloc(sizeof(struct image_reaction_source));
 	context->source = source;
 	
-	context->source_name = "";
+	context->source_name[0] = '\0';
 	context->loud = false;
 
 	image_reaction_source_update(context, settings);
@@ -350,7 +323,6 @@ static void image_reaction_tick(void *data, float seconds)
 
 		if (context->source_name[0] != 0 && new_name == context->source_name) {
 			context->audio_source = weak_capture;
-			//weak_capture = nullptr;
 			weak_capture = NULL;
 		}
 
