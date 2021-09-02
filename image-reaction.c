@@ -162,7 +162,7 @@ static void image_reaction_source_update(void *data, obs_data_t *settings)
 	const char* cfg_source_name = obs_data_get_string(settings, "audio_source");
 	
 	obs_weak_source_t *old = NULL;
-
+	
 	if (cfg_source_name[0] == '\0') {
 		if (context->audio_source) {
 			old = context->audio_source;
@@ -308,7 +308,7 @@ static void image_reaction_tick(void *data, float seconds)
 
 	// Update / refresh audio capturing
 	char* new_name = NULL;
-	if (context->source_name[0] != 0 && !context->audio_source) {
+	if (context->source_name[0] != '\0' && !context->audio_source) {
 		uint64_t t = os_gettime_ns();
 
 		if (t - context->capture_check_time > 3000000000) {
@@ -321,7 +321,7 @@ static void image_reaction_tick(void *data, float seconds)
 		obs_source_t *capture = obs_get_source_by_name(new_name);
 		obs_weak_source_t *weak_capture = capture ? obs_source_get_weak_source(capture) : NULL;
 
-		if (context->source_name[0] != 0 && new_name == context->source_name) {
+		if (context->source_name[0] != '\0' && new_name == context->source_name) {
 			context->audio_source = weak_capture;
 			weak_capture = NULL;
 		}
