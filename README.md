@@ -1,34 +1,20 @@
 # OBS Image Reaction Plugin
 Image that reacts to sound source.
 
-## Installing binaries
-Download binaries from [Releases](https://github.com/scaledteam/obs-image-reaction/releases/). 
+## Install Plugin
+1. Go to the releases page for this repo.
+2. Select the appropriate package installer for your operating system.
+3. Once downloaded, run the package installer.
 
-For Windows, Move the contents of plugin into your obs installation directory. It usually installed into "C:\Program Files\obs-studio\".
-
-For GNU/Linux, put "libimage-reaction" folder into "~/.config/obs-studio/plugins/" folder.
-
-## Building and installing for GNU/Linux:
-```
-git clone https://github.com/scaledteam/obs-image-reaction
-cd obs-image-reaction
-mkdir build
-cd build
-cmake ..
-make
-mkdir -p ~/.config/obs-studio/plugins/libimage-reaction/bin/64bit
-cp libimage-reaction.so ~/.config/obs-studio/plugins/libimage-reaction/bin/64bit/
-cp -r ../data  ~/.config/obs-studio/plugins/libimage-reaction/
-```
-
-## Building for Windows from GNU/Linux:
-You need to download MinGW, OBS Studio source code, Wine, install OBS Studio using wine.
-```
-git clone https://github.com/scaledteam/obs-image-reaction
-cd obs-image-reaction
-mkdir build-win
-cd build-win
-cmake ..  -DCMAKE_SYSTEM_NAME=Windows  -DCMAKE_CXX_COMPILER=/usr/bin/x86_64-w64-mingw32-g++-win32  -DCMAKE_C_COMPILER=/usr/bin/x86_64-w64-mingw32-gcc-win32 -DLIBOBS_INCLUDE_DIR=~/git/obs-studio-27.0.1/libobs -DLIBOBS_LIB=~/.wine/drive_c/Program\ Files/obs-studio/bin/64bit/obs.dll
-make
-```
-Now move libimage-reaction.dll into OBS Plugin directory.
+## Build Plugin Locally
+---
+To build the plugin follow these steps:
+1. In a terminal, run the command:
+2. After that has completed, move into the repo directory:
+3. Build the plugin: there are three build options (Linux, Mac OS and Windows). Depending on the platform you are on run the build script for your platform e.g. for MacOS:
+   ```shell
+   .github/scripts/build-macos.zsh
+   ```
+4. Look in the release folder for the package. For Mac OS this will be `./release/MacOS/`.
+5. Copy your package to the obs plugins folder on your computer.
+   
