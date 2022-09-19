@@ -78,6 +78,6 @@
             "qtVersion": 6
         }
     },
-    "name": "obs-image-reaction-ashmanix",
-    "version": "1.0.0"
+    "name": "obs-image-reaction",
+    "version": "1.3.0"
 }
