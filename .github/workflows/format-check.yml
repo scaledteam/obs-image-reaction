@@ -1,0 +1,29 @@
+name: Format Check
+
+on:
+  workflow_dispatch:
+
+env:
+  PLUGIN_NAME: 'obs-image-reaction-ashmanix'
+
+jobs:
+  clang_check:
+    name: Code Format Check
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install clang-format
+        run: sudo apt-get install -y clang-format-13
+
+      - name: Run clang-format
+        run: ./.github/scripts/check-format.sh && ./.github/scripts/check-changes.sh
+
+      - name: Install cmake-format
+        run: sudo pip install cmakelang
+
+      - name: Run cmake-format
+        run: ./.github/scripts/check-cmake.sh
