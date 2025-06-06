@@ -3,6 +3,16 @@
 # OBS Image Reaction Plugin
 Image that reacts to sound source.
 
+**Note:** This is a temporary test build with significant new features. It may not be stable or performant.
+
+## New Feature: Video Playback Support
+This version includes a major refactor of the plugin's core logic. Instead of only displaying static images and GIFs, it now utilizes OBS's internal media source framework (`ffmpeg_source`). This change allows for the playback of video files (e.g., `.mov`, `.mp4`) as reactions.
+
+### Key Changes:
+- **Video Support:** The plugin can now load and play any video format supported by OBS's Media Source.
+- **Refactored Core:** The image loading library has been completely replaced with media source handling. This may affect performance and stability.
+- **Wider Format Support:** The file dialog now includes common video file formats.
+
 ## Installing binaries
 Download binaries from [official releases](https://github.com/scaledteam/obs-image-reaction/releases/) or more user-friendly version from [ashmanix](https://github.com/ashmanix/obs-image-reaction/releases).
 
