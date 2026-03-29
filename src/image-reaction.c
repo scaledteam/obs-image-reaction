@@ -107,7 +107,7 @@ static void audio_capture(void *param, obs_source_t *src, const struct audio_dat
 		float averageLocal = 0.0f;
 		
 		for (uint32_t i = 0; i < samplesCount; i++) {
-			averageLocal += fabs(samples[i]) / samplesCount;
+			averageLocal += fabsf(samples[i]) / samplesCount;
 		}
 		
 		context->average += context->smoothness * (averageLocal - context->average);
@@ -129,8 +129,8 @@ static void image_reaction_source_update(void *data, obs_data_t *settings)
 	const bool anim_reset_2 = obs_data_get_bool(settings, "anim_reset_2");
 	const bool unload = obs_data_get_bool(settings, "unload");
 	const bool linear_alpha = obs_data_get_bool(settings, "linear_alpha");
-	const double threshold = obs_data_get_double(settings, "threshold");
-	const double smoothness = obs_data_get_double(settings, "smoothness");
+	const float threshold = (float)obs_data_get_double(settings, "threshold");
+	const float smoothness = (float)obs_data_get_double(settings, "smoothness");
 
 	if (context->file1)
 		bfree(context->file1);
@@ -146,7 +146,7 @@ static void image_reaction_source_update(void *data, obs_data_t *settings)
 	context->persistent = !unload;
 	context->linear_alpha = linear_alpha;
 	context->threshold = db_to_mul(threshold);
-	context->smoothness = pow(0.1, smoothness);
+	context->smoothness = powf(0.1f, smoothness);
 
 	/* Load the image if the source is persistent or showing */
 	if (context->persistent || obs_source_showing(context->source))
@@ -192,8 +192,8 @@ static void image_reaction_source_defaults(obs_data_t *settings)
 	obs_data_set_default_bool(settings, "unload", false);
 	obs_data_set_default_bool(settings, "linear_alpha", false);
         obs_data_set_default_string(settings, "audio_source", "");
-        obs_data_set_default_double(settings, "threshold", -40.0f);
-        obs_data_set_default_double(settings, "smoothness", 1.0f);
+        obs_data_set_default_double(settings, "threshold", -40.0);
+        obs_data_set_default_double(settings, "smoothness", 1.0);
 }
 
 static void image_reaction_source_show(void *data)
@@ -523,3 +523,4 @@ bool obs_module_load(void)
 	obs_register_source(&image_reaction_source_info);
 	return true;
 }
+
