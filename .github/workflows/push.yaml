@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - main
+      - update2026
       - 'release/**'
     tags:
       - '*'
