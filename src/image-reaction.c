@@ -91,8 +91,9 @@ static void image_reaction_source_unload(struct image_reaction_source *context)
 	obs_leave_graphics();
 }
 
-static void audio_capture(void *param, obs_source_t*, const struct audio_data *data, bool muted)
+static void audio_capture(void *param, obs_source_t *src, const struct audio_data *data, bool muted)
 {
+    (void)src;
 	struct image_reaction_source *context = param;
 	
 	if (muted) {
@@ -295,8 +296,10 @@ static void image_reaction_source_render(void *data, gs_effect_t *effect)
 	gs_enable_framebuffer_srgb(previous);
 }
 
-static void image_reaction_tick(void *data, float)
+static void image_reaction_tick(void *data, float seconds)
 {
+    (void)seconds;
+
 	struct image_reaction_source *context = data;
 	
 
@@ -412,8 +415,10 @@ static bool add_source(void* param, obs_source_t* src)
     return true;
 }
 
-static bool source_changed(obs_properties_t*, obs_property_t*, obs_data_t *data)
+static bool source_changed(obs_properties_t *props, obs_property_t * prop, obs_data_t *data)
 {
+    (void)props;
+    (void)prop;
     obs_data_get_string(data, "audio_source");
     return true;
 }
