@@ -1,31 +1,39 @@
-cmake_minimum_required(VERSION 3.5)
-project(image-reaction VERSION 1.0)
-set(PLUGIN_AUTHOR "scaled")
-set(PLUGIN_GIT image-reaction)
-set(LINUX_MAINTAINER_EMAIL "scaled@scaledteam.ru")
-set(MACOS_BUNDLEID "ru.scaledteam.image-reaction")
-set(CMAKE_CXX_STANDARD 11)
+cmake_minimum_required(VERSION 3.28...3.30)
 
-if (WIN32 OR APPLE)
-    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/bootstrap.cmake" NO_POLICY_SCOPE)
+
+project(${_name} VERSION ${_version})
+
+option(ENABLE_FRONTEND_API "Use obs-frontend-api for UI functionality" OFF)
+option(ENABLE_QT "Use Qt functionality" OFF)
+
+include(compilerconfig)
+include(defaults)
+include(helpers)
+
+add_library(${CMAKE_PROJECT_NAME} MODULE)
+
+find_package(libobs REQUIRED)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs)
+
+if(ENABLE_FRONTEND_API)
+  find_package(obs-frontend-api REQUIRED)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::obs-frontend-api)
 endif()
 
-if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-    add_definitions(-DLINUX=1)
-    add_definitions(-DUNIX=1)
-endif ()
+if(ENABLE_QT)
+  find_package(Qt6 COMPONENTS Widgets Core)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Qt6::Core Qt6::Widgets)
+  target_compile_options(
+    ${CMAKE_PROJECT_NAME}
+    PRIVATE $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-quoted-include-in-framework-header -Wno-comma>
+  )
+  set_target_properties(
+    ${CMAKE_PROJECT_NAME}
+    PROPERTIES AUTOMOC ON AUTOUIC ON AUTORCC ON
+  )
+endif()
 
-find_package(LibObs REQUIRED)
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/image-reaction.c)
 
-set(image-reaction_SOURCES image-reaction.c)
-
-add_library(image-reaction MODULE
-        ${image-reaction_SOURCES})
-
-target_link_libraries(image-reaction
-    ${LIBOBS_LIBRARIES}
-    ${OBS_FRONTEND_LIB})
-
-include_directories("${LIBOBS_INCLUDE_DIR}/../UI/obs-frontend-api"
-    ${LIBOBS_INCLUDE_DIR}
-)
+set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
