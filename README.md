@@ -1,4 +1,4 @@
-[English](README.md) | [繁體中文](README.zh-TW.md)
+[English](README.md) | [繁體中文](README.zh-TW.md) | [Español](README.es-ES.md)
 
 # OBS Image Reaction Plugin
 Image that reacts to sound source.
