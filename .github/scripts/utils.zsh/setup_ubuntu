@@ -35,14 +35,63 @@ if (( ! (${skips[(Ie)all]} + ${skips[(Ie)deps]}) )) {
     sudo apt-get install ${apt_args} gcc-${${target##*-}//_/-}-linux-gnu g++-${${target##*-}//_/-}-linux-gnu
   }
 
-  sudo add-apt-repository --yes ppa:obsproject/obs-studio
-  sudo apt update
+  sudo apt-get update
 
   sudo apt-get install ${apt_args} \
     build-essential \
+    ca-certificates \
+    curl \
     libgles2-mesa-dev \
-    libsimde-dev \
-    obs-studio
+    libsimde-dev
+
+  # The OBS PPA is still on 32.x. Its headers do not declare gs_image_file_ex_t.
+  # The official Ubuntu 26.04 package for the buildspec version does, under /usr/local.
+  local obs_version
+  obs_version="$(jq -r '.dependencies["obs-studio"].version' ${project_root}/buildspec.json)"
+
+  local -A obs_deb_sha256=(
+    33.0.0 f5844914eadd560314f3a9db020afa7a8afbefb67a26c488f2956dc339704918
+  )
+  if (( ! ${+obs_deb_sha256[${obs_version}]} )) {
+    log_error "No Ubuntu 26.04 package checksum for OBS Studio ${obs_version}."
+    return 2
+  }
+
+  if [[ -f /etc/os-release ]] {
+    local dist_version
+    dist_version="$(source /etc/os-release && print ${VERSION_ID})"
+    autoload -Uz is-at-least
+    if ! is-at-least 26.04 ${dist_version}; then
+      log_error "OBS Studio ${obs_version} requires the Ubuntu 26.04 runner. This runner is ${dist_version}."
+      return 2
+    fi
+  }
+
+  local obs_deb="OBS-Studio-${obs_version}-Ubuntu-26.04-${target##*-}.deb"
+  local obs_deb_path="/tmp/${obs_deb}"
+  local expected_hash="${obs_deb_sha256[${obs_version}]}"
+  local actual_hash=''
+  if [[ -f ${obs_deb_path} ]] actual_hash="${$(sha256sum ${obs_deb_path})%% *}"
+
+  if [[ ${actual_hash} != ${expected_hash} ]] {
+    log_info "Downloading OBS Studio ${obs_version} for Ubuntu 26.04..."
+    curl -fL --retry 3 -o ${obs_deb_path} \
+      "https://github.com/obsproject/obs-studio/releases/download/${obs_version}/${obs_deb}"
+    actual_hash="${$(sha256sum ${obs_deb_path})%% *}"
+  }
+
+  if [[ ${actual_hash} != ${expected_hash} ]] {
+    log_error "OBS Studio package checksum mismatch for ${obs_deb}."
+    return 2
+  }
+
+  sudo apt-get install ${apt_args} -- ${obs_deb_path}
+
+  if [[ ! -f /usr/local/include/obs/graphics/image-file.h ]] || \
+     ! grep -q 'gs_image_file_ex_t' /usr/local/include/obs/graphics/image-file.h; then
+    log_error "Installed OBS headers do not provide gs_image_file_ex_t."
+    return 2
+  fi
 
   local -a _qt_packages=()
 
