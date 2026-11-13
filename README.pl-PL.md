@@ -1,4 +1,4 @@
-[English](README.md) |  [Polski](README.pl-PL.md) | [繁體中文](README.zh-TW.md)
+[English](README.md) | [Polski](README.pl-PL.md) | [繁體中文](README.zh-TW.md)
 
 # Wtyczka OBS Image Reaction
 Obraz, który reaguje na źródło dźwięku.
